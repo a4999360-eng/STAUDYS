@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>منظم المذاكرة الذكي | Smart Study Hub</title>
+    
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-container"></div>
+
+    <div class="app-mobile-container">
+        <!-- Persistent Header: User & Points -->
+        <header class="app-header glass-container">
+            <div id="login-nav" class="login-nav hidden">
+                <!-- Simple header status, usually hidden now in favor of overlay -->
+            </div>
+            <div id="user-nav" class="user-nav hidden">
+                <div class="user-badge" onclick="showPage('settings-page', document.getElementById('btn-settings'))">
+                    <span id="userName">..</span>
+                    <span class="lvl-tag">LVL <span id="level">1</span></span>
+                </div>
+            </div>
+            <div class="points-hub">
+                <button id="buy-mot-btn" class="mot-store-btn disabled" onclick="spendPoints()" title="استبدل 100 نقطة برسالة حافزة">
+                    <i class="fas fa-bolt"></i>
+                </button>
+                <i class="fas fa-crown"></i>
+                <span id="points">0</span>
+            </div>
+        </header>
+
+        <!-- Main Content Area (Tabs) -->
+        <main class="content-view">
+            
+            <!-- HOME PAGE -->
+            <div id="home-page" class="page-container active">
+                <section class="xp-section">
+                    <div class="xp-info">
+                        <span>XP التقدم</span>
+                        <span><span id="xp">0</span> / <span id="nextXP">50</span></span>
+                    </div>
+                    <div class="xp-bar-outer"><div id="xp-bar-inner" class="xp-bar-inner"></div></div>
+                </section>
+
+                <section class="glass-container input-area">
+                    <div class="input-group-mobile vertical">
+                        <input type="text" id="taskInput" placeholder="ما هي مهمتك التالية؟">
+                        <div class="task-details-input">
+                            <div class="dt-input">
+                                <i class="fas fa-calendar-day"></i>
+                                <input type="date" id="taskDate">
+                            </div>
+                            <div class="dt-input">
+                                <i class="fas fa-clock"></i>
+                                <input type="time" id="taskTime">
+                            </div>
+                        </div>
+                        <button class="add-wide-btn" onclick="addTask()">
+                            <i class="fas fa-plus"></i> إضافة المهمة
+                        </button>
+                    </div>
+                </section>
+
+                <div id="taskList" class="task-list-mobile"></div>
+            </div>
+
+            <!-- STORAGE PAGE -->
+            <div id="storage-page" class="page-container hidden">
+                <div class="storage-header">
+                    <h2 class="page-title"><i class="fas fa-boxes-packing"></i> مخزن المهام</h2>
+                    <div class="storage-search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="date" id="storageSearchDate" onchange="renderStorage()">
+                        <button class="clear-search-btn" onclick="clearStorageSearch()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="storage-lists" class="storage-lists-container">
+                    <!-- Dynamic weekly lists will appear here -->
+                </div>
+            </div>
+
+            <!-- TIMER PAGE -->
+            <div id="timer-page" class="page-container hidden">
+                <h2 class="page-title"><i class="fas fa-clock"></i> مؤقت بومودورو</h2>
+                <div class="glass-container timer-big-card">
+                    <div id="timer-display">25:00</div>
+                    <div class="timer-actions">
+                        <button id="timerBtn" class="timer-main-btn" onclick="toggleTimer()">
+                            <i class="fas fa-play"></i> ابدأ
+                        </button>
+                        <button class="timer-reset-btn" onclick="resetTimer()">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS PAGE -->
+            <div id="settings-page" class="page-container hidden">
+                <h2 class="page-title"><i class="fas fa-cog"></i> الإعدادات</h2>
+                <div class="glass-container settings-card">
+                    <div class="settings-item">
+                        <label>نقاط XP لكل مهمة:</label>
+                        <input type="number" id="xpSetting" value="10">
+                    </div>
+                    <div class="settings-item">
+                        <label>مدة الجلسة (دقائق):</label>
+                        <input type="number" id="timerSetting" value="25">
+                    </div>
+                    <button class="save-settings-btn" onclick="saveSettings()">💾 حفظ التعديلات</button>
+                    <button class="logout-btn-full hidden" id="logoutBtn" onclick="logout()">خروج من الحساب</button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Dynamic Achievement Banner -->
+        <div id="achievement-banner" class="achievement-banner-mobile hidden">
+            <i class="fas fa-trophy"></i>
+            <div class="ach-text">
+                <span class="ach-title">إنجاز جديد!</span>
+                <span id="achievement-name" class="ach-desc">...</span>
+            </div>
+        </div>
+
+        <!-- ❗ MOTIVATION MODAL ❗ -->
+        <div id="motivation-modal" class="motivation-modal hidden" onclick="closeMotivation()">
+            <div class="motivation-content">
+                <div class="firework-icon">🎆</div>
+                <h2 id="mot-title">أنت مذهل!</h2>
+                <p id="mot-message">...</p>
+                <button onclick="closeMotivation()">استمر في الإبداع! ✨</button>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav class="bottom-nav glass-container">
+            <button class="nav-btn active" onclick="showPage('home-page', this)" id="btn-home">
+                <i class="fas fa-list-check"></i>
+                <span>المهام</span>
+            </button>
+            <button class="nav-btn" onclick="showPage('storage-page', this)" id="btn-storage">
+                <i class="fas fa-box-archive"></i>
+                <span>التخزين</span>
+            </button>
+            <button class="nav-btn" onclick="showPage('timer-page', this)" id="btn-timer">
+                <i class="fas fa-stopwatch"></i>
+                <span>المؤقت</span>
+            </button>
+            <button class="nav-btn" onclick="showPage('settings-page', this)" id="btn-settings">
+                <i class="fas fa-sliders"></i>
+                <span>إعدادات</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- FULL SCREEN LOGIN OVERLAY -->
+    <div id="login-overlay" class="login-overlay-mobile hidden">
+        <div class="login-card-glass glass-container">
+            <div class="brand-logo">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h2>مرحباً بك في المنظم الذكي</h2>
+            <p>أدخل اسمك للبدء في تنظيم مهامك</p>
+            
+            <div class="login-input-group">
+                <input type="text" id="usernameInputOverlay" placeholder="اكتب اسم المستخدم هنا...">
+                <button class="login-go-big-btn" onclick="loginWithUsernameOverlay()">
+                    ابدأ الآن <i class="fas fa-rocket"></i>
+                </button>
+            </div>
+            
+            <div class="or-divider">أو</div>
+            
+            <button class="google-login-btn" onclick="login()">
+                <i class="fab fa-google"></i> الدخول بحساب جوجل
+            </button>
+        </div>
+    </div>
+
+    <!-- Firebase Compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
