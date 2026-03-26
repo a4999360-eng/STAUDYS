@@ -71,9 +71,43 @@ window.showPage = (pageId, btn) => {
 };
 
 // --- Auth ---
+// Kept for compatibility; GIS now handles Google Sign-In via handleCredentialResponse
 window.login = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    // GIS renders its own button; this function is no longer the primary entry point
+    console.info('Use the Google Sign-In button rendered by GIS.');
+};
+
+// --- Google Identity Services (GIS) ---
+function parseJwt(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+        window.atob(base64).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join('')
+    );
+    return JSON.parse(jsonPayload);
+}
+
+window.handleCredentialResponse = async (response) => {
+    const payload = parseJwt(response.credential);
+
+    // Use email as unique user ID (consistent with previous GIS integration)
+    const googleUserId = `google_${payload.email}`;
+    userId = googleUserId;
+    localStorage.setItem('username_id', userId);
+    localStorage.setItem('username_real', payload.name);
+
+    // UI: close overlay & show user info
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.classList.add('hidden');
+    userNameSpan.innerText = payload.name.split(' ')[0];
+    userNav.classList.remove('hidden');
+    logoutBtn.classList.remove('hidden');
+
+    await loadData();
+    renderAll();
+    console.log('تم الدخول بنجاح:', payload.email);
 };
 
 window.loginWithUsername = async () => {

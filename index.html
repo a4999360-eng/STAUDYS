@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="bg-container"></div>
@@ -181,10 +183,25 @@
             </div>
             
             <div class="or-divider">أو</div>
-            
-            <button class="google-login-btn" onclick="login()">
-                <i class="fab fa-google"></i> الدخول بحساب جوجل
-            </button>
+
+            <!-- Google Identity Services config -->
+            <div id="g_id_onload"
+                 data-client_id="452956702998-ivve5qvsvi174l08a3bbfep4cmkqn6o3.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <!-- GIS Standard Sign-In Button -->
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-locale="ar"
+                 style="display:flex; justify-content:center; margin-top: 5px;">
+            </div>
         </div>
     </div>
 
