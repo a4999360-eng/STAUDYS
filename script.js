@@ -43,6 +43,16 @@ let settings = {
     timerDuration: 25
 };
 
+// Store & Inventory
+let inventory = {
+    themeTickets: 0,
+    starryBg: 0,    // Timestamp of expiration
+    fireBg: 0,
+    heroTitle: 0,
+    xpBoost: 0,
+    taskXpBoost: 0  // New: 10 XP per task boost
+};
+
 // --- Elements ---
 const taskInput = document.getElementById('taskInput');
 const taskList = document.getElementById('taskList');
@@ -61,6 +71,9 @@ const timerSetting = document.getElementById('timerSetting');
 
 // --- Navigation ---
 window.showPage = (pageId, btn) => {
+    // Prevent page switching if Focus Mode is active
+    if (document.body.classList.contains('focus-mode-active')) return;
+
     document.querySelectorAll('.page-container').forEach(p => p.classList.add('hidden'));
     document.getElementById(pageId).classList.remove('hidden');
     
@@ -207,7 +220,8 @@ function loadLocalData() {
     level = parseInt(localStorage.getItem('level')) || 1;
     completedCount = parseInt(localStorage.getItem('completedCount')) || 0;
     achievements = JSON.parse(localStorage.getItem('achievements')) || [];
-    settings = JSON.parse(localStorage.getItem('settings')) || { xpPerTask: 10, timerDuration: 25 };
+    settings = JSON.parse(localStorage.getItem('settings')) || { xpPerTask: 5, timerDuration: 25 };
+    inventory = JSON.parse(localStorage.getItem('inventory')) || { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = Math.floor(points / 100) * 100;
 }
 
@@ -244,8 +258,10 @@ function applyData(data) {
     level = data.level || 1;
     completedCount = data.completedCount || 0;
     achievements = data.achievements || [];
-    settings = data.settings || { xpPerTask: 10, timerDuration: 25 };
+    settings = data.settings || { xpPerTask: 5, timerDuration: 25 };
+    inventory = data.inventory || { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = Math.floor(points / 100) * 100;
+ village
     renderAll();
     applySettingsToUI();
 }
@@ -257,12 +273,13 @@ function resetDataState() {
     level = 1;
     completedCount = 0;
     achievements = [];
-    settings = { xpPerTask: 10, timerDuration: 25 };
+    settings = { xpPerTask: 5, timerDuration: 25 };
+    inventory = { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = 0;
 }
 
 function saveData() {
-    const data = { tasks, points, xp, level, completedCount, achievements, settings };
+    const data = { tasks, points, xp, level, completedCount, achievements, settings, inventory };
     
     if (userId) {
         // Always save locally (Primary Source)
@@ -286,7 +303,7 @@ function saveData() {
 
 // --- Settings ---
 function applySettingsToUI() {
-    xpSetting.value = settings.xpPerTask;
+    // XP setting is now locked at 5, UI field removed
     timerSetting.value = settings.timerDuration;
     if (!timerInterval) {
         timerTime = settings.timerDuration * 60;
@@ -295,7 +312,6 @@ function applySettingsToUI() {
 }
 
 window.saveSettings = () => {
-    settings.xpPerTask = parseInt(xpSetting.value);
     settings.timerDuration = parseInt(timerSetting.value);
     saveData();
     alert("✅ تم حفظ الإعدادات!");
@@ -309,7 +325,14 @@ window.saveSettings = () => {
 function getNextXP() { return level * 50; }
 
 function addXP(amount) {
-    xp += amount;
+    // Double XP if boost is active
+    const now = Date.now();
+    let finalAmount = amount;
+    if (inventory.xpBoost > now) {
+        finalAmount *= 2;
+    }
+
+    xp += finalAmount;
     while (xp >= getNextXP()) {
         xp -= getNextXP();
         level++;
@@ -344,7 +367,157 @@ function checkMotivationMilestone() {
 function renderAll() {
     renderTasks();
     renderProgression();
+    renderStore();
+    applyInventoryEffects();
     if (!document.getElementById('storage-page').classList.contains('hidden')) renderStorage();
+}
+
+function renderStore() {
+    const balance = document.getElementById('store-points-balance');
+    if (balance) balance.innerText = points;
+
+    const now = Date.now();
+    const duration = 24 * 60 * 60 * 1000;
+
+    const items = [
+        { id: 'star_bg', btn: 'btn-star-bg', timer: 'timer-star-bg', expiry: inventory.starryBg },
+        { id: 'fire_bg', btn: 'btn-fire-bg', timer: 'timer-fire-bg', expiry: inventory.fireBg },
+        { id: 'xp_boost', btn: 'btn-xp-boost', timer: 'timer-xp-boost', expiry: inventory.xpBoost },
+        { id: 'hero_title', btn: 'btn-hero-title', timer: 'timer-hero-title', expiry: inventory.heroTitle },
+        { id: 'task_xp_boost', btn: 'btn-task-boost', timer: 'timer-task-boost', expiry: inventory.taskXpBoost }
+    ];
+
+    items.forEach(item => {
+        const btn = document.getElementById(item.btn);
+        const timerSpan = document.getElementById(item.timer);
+        if (!btn || !timerSpan) return;
+
+        if (item.expiry > now) {
+            btn.innerText = "مفعل ✅";
+            btn.classList.add('owned');
+            btn.disabled = true;
+            timerSpan.classList.remove('hidden');
+            timerSpan.innerText = formatDuration(item.expiry - now);
+        } else {
+            // If it just expired
+            btn.classList.remove('owned');
+            btn.disabled = false;
+            // Original price logic or just static from HTML.
+            // Since prices are static in HTML, we just reset text if it was "Active"
+            if (btn.innerText === "مفعل ✅") {
+                const prices = { 
+                    'star_bg': '300', 
+                    'fire_bg': '400', 
+                    'xp_boost': '500', 
+                    'hero_title': '200',
+                    'task_xp_boost': '500' 
+                };
+                btn.innerHTML = `${prices[item.id]} <i class="fas fa-crown"></i>`;
+            }
+            timerSpan.classList.add('hidden');
+        }
+    });
+
+    // Update Theme Ticket Badge
+    const badgeCount = document.getElementById('theme-ticket-count');
+    if (badgeCount) {
+        badgeCount.innerText = inventory.themeTickets;
+        if (inventory.themeTickets > 0) badgeCount.classList.remove('hidden');
+        else badgeCount.classList.add('hidden');
+    }
+}
+
+function formatDuration(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${h}h ${m}m ${s}s`;
+}
+
+function applyInventoryEffects() {
+    const now = Date.now();
+    const bg = document.querySelector('.bg-container');
+
+    // Starry Background
+    if (inventory.starryBg > now) bg.classList.add('starry');
+    else bg.classList.remove('starry');
+
+    // Fire Background
+    if (inventory.fireBg > now) bg.classList.add('fire-theme');
+    else bg.classList.remove('fire-theme');
+
+    // Hero Title
+    const badge = document.getElementById('user-title-badge');
+    if (inventory.heroTitle > now) badge.classList.remove('hidden');
+    else badge.classList.add('hidden');
+}
+
+window.buyItem = (itemId, cost) => {
+    if (points < cost) {
+        alert("❌ عذراً، لا تملك نقاط كافية!");
+        return;
+    }
+
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    if (itemId === 'theme_change') {
+        points -= cost;
+        inventory.themeTickets++;
+        showAchievementNotification("شراء ناجح!", "حصلت على بطاقة تغيير مظهر ✨");
+    } else if (itemId === 'star_bg') {
+        if (inventory.starryBg > now) return;
+        points -= cost;
+        inventory.starryBg = now + day;
+        showAchievementNotification("شراء ناجح!", "تفعيل الخلفية المتحركة 🌌");
+    } else if (itemId === 'fire_bg') {
+        if (inventory.fireBg > now) return;
+        points -= cost;
+        inventory.fireBg = now + day;
+        showAchievementNotification("شراء ناجح!", "تفعيل خلفية الحريق 🔥");
+    } else if (itemId === 'motivation') {
+        points -= cost;
+        spendPointsCustom(0);
+    } else if (itemId === 'hero_title' || itemId === 'btn-hero-title-real') {
+        if (inventory.heroTitle > now) return;
+        points -= cost;
+        inventory.heroTitle = now + day;
+        showAchievementNotification("شراء ناجح!", "أصبحت الآن أسطورة الدراسة! 🏆");
+    } else if (itemId === 'xp_boost') {
+        if (inventory.xpBoost > now) return;
+        points -= cost;
+        inventory.xpBoost = now + day;
+        showAchievementNotification("شراء ناجح!", "تفعيل مضاعف الـ XP 🚀");
+    } else if (itemId === 'task_xp_boost') {
+        if (inventory.taskXpBoost > now) return;
+        points -= cost;
+        inventory.taskXpBoost = now + day;
+        showAchievementNotification("شراء ناجح!", "توربو المهام (10 XP) مفعل! ⚙️");
+    }
+
+    saveData();
+    renderAll();
+};
+
+// Update store timers every second
+setInterval(() => {
+    if (!document.getElementById('settings-page').classList.contains('hidden')) {
+        renderStore();
+    }
+    applyInventoryEffects(); // Also ensure effects are applied if they expire while looking at home
+}, 1000);
+
+function spendPointsCustom(amount) {
+    // Shared with spendPoints logic
+    const premiumMessages = [
+        "لا تتوقف أبداً! العظمة تتطلب الصبر والجهد. 💎",
+        "أنت تبني مستقبلك مع كل دقيقة دراسة. استمر! 🔥",
+        "النجاح ليس صدفة، بل نتيجة قراراتك اليوم. 🚀",
+        "تذكر دائماً لماذا بدأت.. الهدف يستحق التعب. ✨",
+        "العالم ينتظر لمستك الخاصة وتأثيرك المبدع! 🏆"
+    ];
+    showMotivationModalPremium("مكافأة الحماس! ✨", premiumMessages[Math.floor(Math.random() * premiumMessages.length)]);
 }
 
 function renderTasks() {
@@ -387,7 +560,7 @@ function updatePointsUI() {
     pointsSpan.innerText = points;
     const btn = document.getElementById('buy-mot-btn');
     if (!btn) return;
-    if (points >= 100) {
+    if (points >= 50) {
         btn.classList.add('active');
         btn.classList.remove('disabled');
         btn.disabled = false;
@@ -399,8 +572,8 @@ function updatePointsUI() {
 }
 
 window.spendPoints = () => {
-    if (points < 100) return;
-    points -= 100;
+    if (points < 50) return;
+    points -= 50;
     saveData();
     updatePointsUI();
     
@@ -504,13 +677,34 @@ window.toggleTask = (id) => {
     const wasComp = task.completed;
     task.completed = !wasComp;
     if (!wasComp && task.completed) {
-        points += settings.xpPerTask;
+        // XP calculation
+        let baseXP = 5;
+        if (inventory.taskXpBoost > Date.now()) baseXP = 10;
+        
+        points += baseXP;
         completedCount++;
-        addXP(settings.xpPerTask);
+        addXP(baseXP);
+        showTaskFeedback(); 
     }
     saveData();
     renderTasks();
 };
+
+function showTaskFeedback() {
+    const feedbackWords = ["ممتاز!", "رائع!", "جيد جداً!", "عمل مذهل!", "بطل!", "استمر!"];
+    const word = feedbackWords[Math.floor(Math.random() * feedbackWords.length)];
+    
+    const container = document.createElement('div');
+    container.className = 'task-feedback-container';
+    container.innerHTML = `<div class="task-feedback-text">${word}</div>`;
+    
+    document.body.appendChild(container);
+    
+    // إزالة العنصر بعد انتهاء الأنيميشن
+    setTimeout(() => {
+        container.remove();
+    }, 1500);
+}
 
 window.deleteTask = (id) => {
     const task = tasks.find(t => t.id === id);
@@ -542,6 +736,12 @@ window.toggleTimer = () => {
             if (timerTime <= 0) {
                 clearInterval(timerInterval);
                 timerInterval = null;
+                
+                // Exit Focus Mode if active
+                if (document.body.classList.contains('focus-mode-active')) {
+                    toggleFocusMode();
+                }
+
                 addXP(50);
                 points += 10;
                 alert("💪 جولة رائعة! +50 XP");
@@ -565,6 +765,17 @@ function updateTimerDisplay() {
     const s = timerTime%60;
     timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
 }
+
+window.toggleFocusMode = () => {
+    const isFocus = document.body.classList.toggle('focus-mode-active');
+    const exitBtn = document.getElementById('exit-focus-btn');
+    
+    if (isFocus) {
+        exitBtn.classList.remove('hidden');
+    } else {
+        exitBtn.classList.add('hidden');
+    }
+};
 
 // --- Popups ---
 function showAchievementNotification(title, desc) {
@@ -753,8 +964,109 @@ setInterval(checkTaskReminders, 5000);
 
 renderAll();
 
-// --- Button Micro-Interactions ---
-// تأثير ضغطة قوي على كل الأزرار
+// --- Theme System ---
+window.toggleThemePalette = () => {
+    const palette = document.getElementById('theme-palette');
+    
+    if (palette.classList.contains('hidden')) {
+        // Opening palette - update instruction text if needed
+        const header = palette.querySelector('.palette-header span');
+        if (inventory.themeTickets > 0) {
+            header.innerText = `لديك ${inventory.themeTickets} بطاقة ✨`;
+        } else {
+            header.innerText = "تحتاج لبطاقة تغيير! 🎟️";
+        }
+    }
+
+    palette.classList.toggle('hidden');
+    
+    // Close on click outside
+    if (!palette.classList.contains('hidden')) {
+        const closePalette = (e) => {
+            if (!e.target.closest('.theme-switcher-container')) {
+                palette.classList.add('hidden');
+                document.removeEventListener('click', closePalette);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closePalette), 10);
+    }
+};
+
+window.setTheme = (color) => {
+    // Check if user has tickets
+    if (inventory.themeTickets <= 0) {
+        alert("⚠️ تحتاج إلى شراء 'بطاقة تغيير المظهر' من المتجر أولاً!");
+        showPage('settings-page', document.getElementById('btn-settings'));
+        return;
+    }
+
+    // consume ticket
+    inventory.themeTickets--;
+    saveData();
+    renderAll();
+
+    // Basic variants
+    const dark = lightenDarkenColor(color, -40);
+    const light = lightenDarkenColor(color, 40);
+    const rgb = hexToRgb(color);
+    
+    // Calculate contrast for text
+    const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+    const textColor = brightness > 155 ? '#0f172a' : '#ffffff';
+    
+    document.documentElement.style.setProperty('--primary-color', color);
+    document.documentElement.style.setProperty('--primary-dark', dark);
+    document.documentElement.style.setProperty('--primary-light', light);
+    document.documentElement.style.setProperty('--primary-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+    document.documentElement.style.setProperty('--text-on-primary', textColor);
+    
+    // Save to localStorage
+    localStorage.setItem('theme_primary', color);
+};
+
+window.resetTheme = () => {
+    const defaultColor = '#3b82f6';
+    setTheme(defaultColor);
+    localStorage.removeItem('theme_primary');
+    document.getElementById('theme-palette').classList.add('hidden');
+};
+
+// --- Color Utilities ---
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 59, g: 130, b: 246 }; // Default to blue rgb
+}
+
+function lightenDarkenColor(col, amt) {
+    let usePound = false;
+    if (col[0] == "#") {
+        col = col.slice(1);
+        usePound = true;
+    }
+    let num = parseInt(col, 16);
+    let r = (num >> 16) + amt;
+    if (r > 255) r = 255; else if (r < 0) r = 0;
+    let g = ((num >> 8) & 0x00FF) + amt;
+    if (g > 255) g = 255; else if (g < 0) g = 0;
+    let b = (num & 0x0000FF) + amt;
+    if (b > 255) b = 255; else if (b < 0) b = 0;
+    
+    // Reconstruct with bitwise and pad
+    const final = (b | (g << 8) | (r << 16)).toString(16).padStart(6, '0');
+    return (usePound ? "#" : "") + final;
+}
+
+// Initialize theme
+const savedTheme = localStorage.getItem('theme_primary');
+if (savedTheme) {
+    setTheme(savedTheme);
+}
+
+// ... original button animations follow ...
 document.addEventListener('mousedown', (e) => {
     const btn = e.target.closest('button');
     if (btn && !btn.classList.contains('nav-btn')) {
@@ -771,3 +1083,114 @@ document.addEventListener('mouseleave', (e) => {
     const btn = e.target.closest('button');
     if (btn) btn.style.transform = '';
 }, true);
+
+// --- Draggable Theme Switcher ---
+(function initDraggableThemeSwitcher() {
+    const container = document.querySelector('.theme-switcher-container');
+    if (!container) return;
+
+    let isDragging = false;
+    let dragStartX, dragStartY;
+    let startLeft, startTop;
+    let hasMoved = false;
+
+    // Restore saved position
+    const savedPos = JSON.parse(localStorage.getItem('theme_btn_pos') || 'null');
+    if (savedPos) {
+        container.style.left = savedPos.left + 'px';
+        container.style.top = savedPos.top + 'px';
+        container.style.bottom = 'auto';
+    }
+
+    function getPos(e) {
+        // Support both mouse and touch events
+        if (e.touches) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function onStart(e) {
+        // Only start drag from the button itself (not color options)
+        if (!e.target.closest('#theme-toggle-btn')) return;
+
+        isDragging = true;
+        hasMoved = false;
+        const pos = getPos(e);
+        dragStartX = pos.x;
+        dragStartY = pos.y;
+
+        const rect = container.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        container.classList.add('dragging');
+
+        // Switch to top/left positioning
+        container.style.left = startLeft + 'px';
+        container.style.top = startTop + 'px';
+        container.style.bottom = 'auto';
+        container.style.right = 'auto';
+
+        if (e.type !== 'touchstart') {
+            e.preventDefault();
+        }
+    }
+
+    function onMove(e) {
+        if (!isDragging) return;
+
+        const pos = getPos(e);
+        const dx = pos.x - dragStartX;
+        const dy = pos.y - dragStartY;
+
+        // Mark as moved if displacement is significant
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            hasMoved = true;
+        }
+
+        let newLeft = startLeft + dx;
+        let newTop = startTop + dy;
+
+        // Clamp to viewport boundaries
+        const maxLeft = window.innerWidth - container.offsetWidth;
+        const maxTop = window.innerHeight - container.offsetHeight;
+        newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+        newTop = Math.max(0, Math.min(newTop, maxTop));
+
+        container.style.left = newLeft + 'px';
+        container.style.top = newTop + 'px';
+
+        e.preventDefault();
+    }
+
+    function onEnd(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        container.classList.remove('dragging');
+
+        // Save position
+        const rect = container.getBoundingClientRect();
+        localStorage.setItem('theme_btn_pos', JSON.stringify({ left: rect.left, top: rect.top }));
+
+        // If the user barely moved, allow the click (toggleThemePalette) to fire
+        // If they dragged, suppress the click
+        if (hasMoved) {
+            e.stopPropagation();
+            // Temporarily block click
+            const blockClick = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+            container.addEventListener('click', blockClick, { capture: true, once: true });
+        }
+    }
+
+    // Mouse events
+    container.addEventListener('mousedown', onStart);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+
+    // Touch events (mobile)
+    container.addEventListener('touchstart', onStart, { passive: false });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+})();
+
