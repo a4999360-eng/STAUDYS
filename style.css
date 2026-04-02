@@ -319,6 +319,8 @@ body {
 .mini-btn:active { transform: scale(0.85); }
 .mini-btn.check { color: var(--success-color); }
 .mini-btn.check:hover { filter: drop-shadow(0 0 8px var(--success-color)); }
+.mini-btn.edit { color: var(--primary-color); }
+.mini-btn.edit:hover { filter: drop-shadow(0 0 8px var(--primary-color)); }
 .mini-btn.del { color: var(--danger-color); }
 .mini-btn.del:hover { filter: drop-shadow(0 0 8px var(--danger-color)); }
 
@@ -468,7 +470,9 @@ body {
 .st-txt { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-date { font-size: 0.7rem; opacity: 0.5; font-family: monospace; margin-left: 10px; }
 .st-del-btn { background: none; border: none; color: var(--danger-color); opacity: 0.6; cursor: pointer; padding: 10px; transition: var(--transition); }
+.st-rep-btn { background: none; border: none; color: var(--primary-color); opacity: 0.6; cursor: pointer; padding: 10px; transition: var(--transition); font-size: 1.1rem; }
 .st-del-btn:hover, .st-del-btn:active { opacity: 1; transform: scale(1.1); }
+.st-rep-btn:hover, .st-rep-btn:active { opacity: 1; transform: scale(1.1) rotate(180deg); }
 .empty-msg { padding: 40px; text-align: center; opacity: 0.7; }
 
 /* Achievement Banner */

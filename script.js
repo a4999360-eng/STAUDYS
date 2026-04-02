@@ -36,6 +36,7 @@ let achievements = [];
 let timerTime = 1500;
 let timerInterval = null;
 let lastMilestone = 0;
+let editingTaskId = null;
 
 // Settings
 let settings = {
@@ -298,6 +299,7 @@ function saveData() {
         localStorage.setItem('completedCount', completedCount);
         localStorage.setItem('achievements', JSON.stringify(achievements));
         localStorage.setItem('settings', JSON.stringify(settings));
+        localStorage.setItem('inventory', JSON.stringify(inventory));
     }
 }
 
@@ -543,10 +545,13 @@ function renderTasks() {
                 ${dateTimeStr}
             </div>
             <div class="task-actions-mini">
-                <button class="mini-btn check" onclick="toggleTask(${task.id})">
+                <button class="mini-btn check" onclick="toggleTask(${task.id})" title="إكمال المهمة">
                     <i class="fas ${task.completed ? 'fa-check-double' : 'fa-circle-check'}"></i>
                 </button>
-                <button class="mini-btn del" onclick="deleteTask(${task.id})">
+                <button class="mini-btn edit" onclick="editTask(${task.id})" title="تعديل المهمة">
+                    <i class="fas fa-pen-to-square"></i>
+                </button>
+                <button class="mini-btn del" onclick="deleteTask(${task.id})" title="حذف المهمة">
                     <i class="fas fa-trash-can"></i>
                 </button>
             </div>
@@ -555,6 +560,40 @@ function renderTasks() {
     });
     updatePointsUI();
 }
+
+window.editTask = (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    editingTaskId = id;
+    document.getElementById('editTaskInput').value = task.text;
+    document.getElementById('editTaskDate').value = task.date || "";
+    document.getElementById('editTaskTime').value = task.time || "";
+
+    document.getElementById('edit-modal').classList.remove('hidden');
+};
+
+window.saveEditedTask = () => {
+    if (!editingTaskId) return;
+    const task = tasks.find(t => t.id === editingTaskId);
+    if (!task) return;
+
+    const newText = document.getElementById('editTaskInput').value.trim();
+    if (!newText) return;
+
+    task.text = newText;
+    task.date = document.getElementById('editTaskDate').value;
+    task.time = document.getElementById('editTaskTime').value || null;
+
+    saveData();
+    renderTasks();
+    closeEditModal();
+};
+
+window.closeEditModal = () => {
+    document.getElementById('edit-modal').classList.add('hidden');
+    editingTaskId = null;
+};
 
 function updatePointsUI() {
     pointsSpan.innerText = points;
@@ -722,6 +761,28 @@ window.permanentDelete = (id) => {
     renderAll();
 };
 
+window.repeatTask = (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+
+    tasks.push({
+        id: Date.now(),
+        text: task.text,
+        completed: false,
+        date: dateStr,
+        time: task.time,
+        notified: false,
+        archived: false
+    });
+
+    saveData();
+    renderAll();
+    showAchievementNotification("تم بنجاح!", "تم إعادة تكرار المهمة لتاريخ اليوم 🚀");
+};
+
 // --- Timer ---
 window.toggleTimer = () => {
     const btn = document.getElementById('timerBtn');
@@ -863,7 +924,10 @@ function renderStorage() {
                 <span class="st-dot"></span>
                 <span class="st-txt" style="${t.archived ? 'opacity: 0.7' : ''}">${t.text}${t.archived ? ' (محذوف)' : ''}</span>
                 <span class="st-date">${t.date.split('-').slice(1).join('/')}</span>
-                <button class="st-del-btn" onclick="permanentDelete(${t.id})">
+                <button class="st-rep-btn" onclick="repeatTask(${t.id})" title="تكرار المهمة لليوم">
+                    <i class="fas fa-rotate-right"></i>
+                </button>
+                <button class="st-del-btn" onclick="permanentDelete(${t.id})" title="حذف نهائي">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -992,18 +1056,20 @@ window.toggleThemePalette = () => {
     }
 };
 
-window.setTheme = (color) => {
+window.setTheme = (color, isInit = false) => {
     // Check if user has tickets
-    if (inventory.themeTickets <= 0) {
-        alert("⚠️ تحتاج إلى شراء 'بطاقة تغيير المظهر' من المتجر أولاً!");
-        showPage('settings-page', document.getElementById('btn-settings'));
-        return;
-    }
+    if (!isInit) {
+        if (inventory.themeTickets <= 0) {
+            alert("⚠️ تحتاج إلى شراء 'بطاقة تغيير المظهر' من المتجر أولاً!");
+            showPage('settings-page', document.getElementById('btn-settings'));
+            return;
+        }
 
-    // consume ticket
-    inventory.themeTickets--;
-    saveData();
-    renderAll();
+        // consume ticket
+        inventory.themeTickets--;
+        saveData();
+        renderAll();
+    }
 
     // Basic variants
     const dark = lightenDarkenColor(color, -40);
@@ -1026,7 +1092,7 @@ window.setTheme = (color) => {
 
 window.resetTheme = () => {
     const defaultColor = '#3b82f6';
-    setTheme(defaultColor);
+    setTheme(defaultColor, true);
     localStorage.removeItem('theme_primary');
     document.getElementById('theme-palette').classList.add('hidden');
 };
@@ -1063,7 +1129,7 @@ function lightenDarkenColor(col, amt) {
 // Initialize theme
 const savedTheme = localStorage.getItem('theme_primary');
 if (savedTheme) {
-    setTheme(savedTheme);
+    setTheme(savedTheme, true);
 }
 
 // ... original button animations follow ...
