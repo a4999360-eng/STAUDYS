@@ -316,7 +316,7 @@ function applySettingsToUI() {
 window.saveSettings = () => {
     settings.timerDuration = parseInt(timerSetting.value);
     saveData();
-    alert("✅ تم حفظ الإعدادات!");
+    showToast("✅ تم حفظ الإعدادات بنجاح!", "success");
     if (!timerInterval) {
         timerTime = settings.timerDuration * 60;
         updateTimerDisplay();
@@ -395,8 +395,8 @@ function renderStore() {
         if (!btn || !timerSpan) return;
 
         if (item.expiry > now) {
-            btn.innerText = "مفعل ✅";
             btn.classList.add('owned');
+            btn.innerText = "مفعل ✅";
             btn.disabled = true;
             timerSpan.classList.remove('hidden');
             timerSpan.innerText = formatDuration(item.expiry - now);
@@ -412,7 +412,7 @@ function renderStore() {
                     'fire_bg': '400', 
                     'xp_boost': '500', 
                     'hero_title': '200',
-                    'task_xp_boost': '500' 
+                    'task_xp_boost': '500'
                 };
                 btn.innerHTML = `${prices[item.id]} <i class="fas fa-crown"></i>`;
             }
@@ -457,7 +457,7 @@ function applyInventoryEffects() {
 
 window.buyItem = (itemId, cost) => {
     if (points < cost) {
-        alert("❌ عذراً، لا تملك نقاط كافية!");
+        showToast("❌ عذراً، لا تملك نقاط كافية!", "delete");
         return;
     }
 
@@ -588,6 +588,7 @@ window.saveEditedTask = () => {
     saveData();
     renderTasks();
     closeEditModal();
+    showToast("تم تعديل المهمة بنجاح ✨", "edit");
 };
 
 window.closeEditModal = () => {
@@ -702,6 +703,7 @@ window.addTask = () => {
     saveData();
     renderTasks();
     requestNotificationPermission();
+    showToast("تم إضافة المهمة بنجاح 🚀", "add");
 };
 
 function getArabicDayName(dateStr) {
@@ -727,6 +729,9 @@ window.toggleTask = (id) => {
     }
     saveData();
     renderTasks();
+    if (task.completed) {
+        showToast("اكتملت المهمة! عمل رائع 🏆", "info");
+    }
 };
 
 function showTaskFeedback() {
@@ -751,6 +756,7 @@ window.deleteTask = (id) => {
         task.archived = true;
         saveData();
         renderAll();
+        showToast("تم نقل المهمة للمخزن (محذوفة) 🗑️", "delete");
     }
 };
 
@@ -759,6 +765,7 @@ window.permanentDelete = (id) => {
     tasks = tasks.filter(t => t.id !== id);
     saveData();
     renderAll();
+    showToast("تم حذف المهمة نهائياً ❌", "delete");
 };
 
 window.repeatTask = (id) => {
@@ -805,7 +812,7 @@ window.toggleTimer = () => {
 
                 addXP(50);
                 points += 10;
-                alert("💪 جولة رائعة! +50 XP");
+                showToast("💪 جولة رائعة! +50 XP", "success");
                 resetTimer();
             }
         }, 1000);
@@ -1259,4 +1266,89 @@ document.addEventListener('mouseleave', (e) => {
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('touchend', onEnd);
 })();
+
+// --- Voice Input (إضافة مهمة بالصوت) ---
+window.startVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("عذراً، متصفحك لا يدعم التعرف على الصوت. يرجى استخدام متصفح حديث مثل Chrome.");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA'; // التعرف على اللغة العربية
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const btn = document.getElementById('voice-input-btn');
+    const input = document.getElementById('taskInput');
+
+    recognition.onstart = () => {
+        btn.classList.add('recording');
+        input.placeholder = "جاري الاستماع... تحدث الآن";
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        input.focus();
+        btn.classList.remove('recording');
+        input.placeholder = "ما هي مهمتك التالية؟";
+        
+        // تأثير اهتزاز خفيف للتأكيد
+        input.style.transform = 'scale(1.02)';
+        setTimeout(() => input.style.transform = 'scale(1)', 200);
+    };
+
+    recognition.onspeechend = () => {
+        recognition.stop();
+        btn.classList.remove('recording');
+        input.placeholder = "ما هي مهمتك التالية؟";
+    };
+
+    recognition.onerror = (event) => {
+        btn.classList.remove('recording');
+        input.placeholder = "ما هي مهمتك التالية؟";
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+            alert("يرجى السماح بالوصول للميكروفون لاستخدام هذه الميزة.");
+        } else if (event.error === 'no-speech') {
+            // تجاهل حالة عدم وجود كلام
+        } else {
+            alert("حدث خطأ أثناء التعرف على الصوت: " + event.error);
+        }
+    };
+
+    recognition.start();
+};
+
+// --- Toast System ---
+function showToast(message, type = "info") {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let icon = "fa-info-circle";
+    if (type === "add") icon = "fa-plus-circle";
+    if (type === "delete") icon = "fa-trash-alt";
+    if (type === "edit") icon = "fa-pen-to-square";
+    if (type === "success") icon = "fa-check-circle";
+
+    toast.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span class="toast-msg">${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
 

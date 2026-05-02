@@ -25,6 +25,12 @@
         </button>
         <!-- Persistent Header: User & Points -->
         <header class="app-header glass-container">
+            <div class="header-brand">
+                <div class="header-logo">
+                    <img src="213.png" alt="Logo">
+                </div>
+                <span class="header-brand-name">DIARY</span>
+            </div>
             <div id="login-nav" class="login-nav hidden">
                 <!-- Simple header status, usually hidden now in favor of overlay -->
             </div>
@@ -61,7 +67,12 @@
 
                 <section class="glass-container input-area">
                     <div class="input-group-mobile vertical">
-                        <input type="text" id="taskInput" placeholder="ما هي مهمتك التالية؟">
+                        <div class="task-input-wrapper">
+                            <input type="text" id="taskInput" placeholder="ما هي مهمتك التالية؟">
+                            <button id="voice-input-btn" class="voice-input-btn" onclick="startVoiceInput()" title="إضافة مهمة بالصوت">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
                         <div class="task-details-input">
                             <div class="dt-input">
                                 <i class="fas fa-calendar-day"></i>
@@ -178,6 +189,7 @@
                         </button>
                     </div>
 
+
                     <div class="store-item glass-container">
                         <div class="item-icon badge-item"><i class="fas fa-shield-halved"></i></div>
                         <h4>لقب "أسطورة الدرا"</h4>
@@ -293,8 +305,11 @@
     <!-- FULL SCREEN LOGIN OVERLAY -->
     <div id="login-overlay" class="login-overlay-mobile hidden">
         <div class="login-card-glass glass-container">
-            <div class="brand-logo">
-                <i class="fas fa-graduation-cap"></i>
+            <div class="login-brand-group">
+                <div class="brand-logo">
+                    <img src="213.png" alt="Logo">
+                </div>
+                <h1 class="login-brand-name">DIARY</h1>
             </div>
             <h2>مرحباً بك في المنظم الذكي</h2>
             <p>أدخل اسمك للبدء في تنظيم مهامك</p>
@@ -336,6 +351,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <div id="toast-container" class="toast-container"></div>
     <script src="script.js"></script>
 </body>
 </html>
