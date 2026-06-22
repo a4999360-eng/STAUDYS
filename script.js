@@ -224,6 +224,7 @@ function loadLocalData() {
     settings = JSON.parse(localStorage.getItem('settings')) || { xpPerTask: 5, timerDuration: 25 };
     inventory = JSON.parse(localStorage.getItem('inventory')) || { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = Math.floor(points / 100) * 100;
+    applySettingsToUI();
 }
 
 async function loadData() {
@@ -262,7 +263,6 @@ function applyData(data) {
     settings = data.settings || { xpPerTask: 5, timerDuration: 25 };
     inventory = data.inventory || { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = Math.floor(points / 100) * 100;
- village
     renderAll();
     applySettingsToUI();
 }
@@ -277,6 +277,7 @@ function resetDataState() {
     settings = { xpPerTask: 5, timerDuration: 25 };
     inventory = { themeTickets: 0, starryBg: 0, fireBg: 0, heroTitle: 0, xpBoost: 0, taskXpBoost: 0 };
     lastMilestone = 0;
+    applySettingsToUI();
 }
 
 function saveData() {
